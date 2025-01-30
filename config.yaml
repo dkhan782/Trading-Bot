@@ -1,1 +1,28 @@
+apis:
+  dexscreener: "https://api.dexscreener.com/token-profiles/latest/v1"  
+  pocket_universe: "YOUR_PU_API_KEY"       
+  telegram:
+    bot_token: "8001858149:AAGK_SleDGv2YJE1-D7tZg1ren9DQXIFgpc"   
+    chat_id: "userinfobot"       
 
+blockchain:
+  rpc_url: "https://mainnet.infura.io/v3/b014cf04937b4b71b01ab0c1da0279e9"            
+  chain_id: 1                            
+
+wallet:
+  address: "ETH: 0xaf8d7B520C940BbCbD2e39A09D6F2F7C99092292, SOL: 9NAxYfUuZ8ocRWFzc7nvbwfwhvRastt8JZThjSkgUYaY, LTC: xpub6D32KTjSqeKJQsootGpUUzbcuumXTUVFjdhL1xZbDibZ979v3GiQzJLZT3zsAkD4eyUiiQTLRP2zjdf7Yoi6enrPSa811e5RPduASDa7AE2, BTC: xpub6Bqw5ikjMP9LaXyPY4eJdFBZpN3jAt5if7yF7dVADeeguKdNkRMxjYsJEfCpJTL5zPDickt2MqEVMaCcvKo86nweWn35pJLPwqkEB3yLCq8, DOGE: xpub6CPXM74iiA6a3unmwPLpxBkrkeXNSYPexhHEigZqQvJSoSordEEBZKYMU7DPqHxaFv6A28z61mt9cZUGsaioZRFf8XGKyywVYWs6MD28Lgz"
+  private_key: "5fbb092b7760565d41461aaac52ff91c72d282e1a1d419eeeed91b7050928ebc"    
+
+trading:
+  slippage: 1.5                           
+  gas_multiplier: 1.2                     
+  max_trade_eth: 0.5                      
+
+blacklist:
+  coins: 
+    - ""                       # Known scam tokens
+  devs:
+    - ""                       # Rug pullers' wallets
+
+database:
+path: "sqlite:///data/trades.db"
