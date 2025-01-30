@@ -1,6 +1,5 @@
 apis:
-  dexscreener: "https://api.dexscreener.com/token-profiles/latest/v1"  
-  pocket_universe: "YOUR_PU_API_KEY"       
+  dexscreener: "https://api.dexscreener.com/token-profiles/latest/v1"         
   telegram:
     bot_token: "8001858149:AAGK_SleDGv2YJE1-D7tZg1ren9DQXIFgpc"   
     chat_id: "userinfobot"       
@@ -18,11 +17,6 @@ trading:
   gas_multiplier: 1.2                     
   max_trade_eth: 0.5                      
 
-blacklist:
-  coins: 
-    - ""                       # Known scam tokens
-  devs:
-    - ""                       # Rug pullers' wallets
 
 database:
 path: "sqlite:///data/trades.db"
