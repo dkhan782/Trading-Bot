@@ -1,0 +1,130 @@
+import os
+import yaml
+import requests
+import pandas as pd
+import numpy as np
+import web3
+from web3 import Web3
+from telegram import Update, Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from datetime import datetime
+from sqlalchemy import create_engine
+from apscheduler.schedulers.background import BackgroundScheduler
+from typing import Dict, List, Tuple
+
+# Load configuration
+with open('config.yaml') as f:
+    config = yaml.safe_load(f)
+
+# Initialize Web3 and Telegram
+w3 = Web3(Web3.HTTPProvider(config['blockchain']['rpc_url']))
+telegram_bot = Bot(token=config['telegram']['bot_token'])
+
+class DexTradingBot:
+    def __init__(self):
+        self.engine = create_engine(config['database']['uri'])
+        self.scheduler = BackgroundScheduler()
+        self.setup_telegram()
+        self.setup_schedulers()
+        self.private_key = config['wallet']['private_key']
+        self.wallet_address = config['wallet']['address']
+        
+    def setup_telegram(self):
+        self.updater = Updater(token=config['telegram']['bot_token'], use_context=True)
+        dp = self.updater.dispatcher
+        
+        # Add handlers
+        dp.add_handler(CommandHandler('start', self.start_cmd))
+        dp.add_handler(CommandHandler('buy', self.buy_cmd))
+        dp.add_handler(CommandHandler('sell', self.sell_cmd))
+        dp.add_handler(CommandHandler('portfolio', self.portfolio_cmd))
+        
+    def setup_schedulers(self):
+        self.scheduler.add_job(self.monitor_prices, 'interval', 
+                             minutes=config['monitoring']['interval'])
+        self.scheduler.add_job(self.update_blacklists, 'interval',
+                             hours=config['blacklist']['update_interval'])
+        
+    def start(self):
+        self.scheduler.start()
+        self.updater.start_polling()
+        print("Bot started with Telegram interface and monitoring")
+
+    # Telegram command handlers
+    async def buy_cmd(self, update: Update, context: CallbackContext) -> None:
+        """Handle /buy command"""
+        try:
+            token_address = context.args[0]
+            amount = float(context.args[1])
+            
+            if self.is_approved_token(token_address):
+                tx_hash = self.execute_trade(token_address, amount, 'buy')
+                await update.message.reply_text(
+                    f"✅ Buy order executed\nTX Hash: {tx_hash}"
+                )
+                self.alert(f"New buy order: {amount} of {token_address}")
+            else:
+                await update.message.reply_text("❌ Token not approved for trading")
+                
+        except Exception as e:
+            await update.message.reply_text(f"Error: {str(e)}")
+
+    async def sell_cmd(self, update: Update, context: CallbackContext) -> None:
+        """Handle /sell command"""
+        # Similar implementation to buy_cmd
+
+    # Trading functions
+    def execute_trade(self, token_address: str, amount: float, side: str) -> str:
+        """Execute on-chain trade using Uniswap router"""
+        contract = self.load_contract(config['contracts']['uniswap_router'])
+        amount_wei = w3.to_wei(amount, 'ether')
+        
+        tx = contract.functions.swapExactETHForTokens(
+            0,  # Min out
+            [w3.eth.contract(address=config['tokens']['weth']).address, token_address],
+            self.wallet_address,
+            int(datetime.now().timestamp() + 300)
+        ).build_transaction({
+            'from': self.wallet_address,
+            'value': amount_wei,
+            'gas': 200000,
+            'gasPrice': w3.eth.gas_price,
+            'nonce': w3.eth.get_transaction_count(self.wallet_address)
+        })
+        
+        signed_tx = w3.eth.account.sign_transaction(tx, self.private_key)
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        return tx_hash.hex()
+
+    # Monitoring and alerting
+    def monitor_prices(self):
+        """Check token prices and execute strategy"""
+        for token in self.get_watchlist():
+            data = self.fetch_token_data(token)
+            if self.strategy_should_buy(data):
+                self.execute_trade(token, config['trading']['default_amount'], 'buy')
+                self.alert(f"Automatic buy executed for {token}")
+
+    def alert(self, message: str):
+        """Send alert to Telegram"""
+        telegram_bot.send_message(
+            chat_id=config['telegram']['chat_id'],
+            text=f"🚨 {message}"
+        )
+
+    # Utility functions
+    def load_contract(self, address: str):
+        return w3.eth.contract(
+            address=address,
+            abi=config['contracts']['uniswap_abi']
+        )
+
+    def is_approved_token(self, token_address: str) -> bool:
+        return token_address in config['trading']['approved_tokens']
+
+if __name__ == "__main__":
+    bot = DexTradingBot()
+    bot.start()
+    # Keep main thread alive
+    while True:
+        pass
